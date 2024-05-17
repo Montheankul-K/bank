@@ -1,0 +1,5 @@
+config.yaml
+.idea/
+.vscode/
+/go.sum
+.DS_Store
