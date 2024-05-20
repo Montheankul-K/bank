@@ -3,8 +3,9 @@ package service
 import (
 	"database/sql"
 	"errors"
+	"github.com/Montheankul-K/bank/errs"
+	"github.com/Montheankul-K/bank/logs"
 	"github.com/Montheankul-K/bank/repository"
-	"log"
 )
 
 type customerService struct {
@@ -20,12 +21,12 @@ func NewCustomerService(customerRepository repository.CustomerRepository) custom
 func (s customerService) GetCustomers() ([]CustomerResponse, error) {
 	customers, err := s.customerRepository.GetAll()
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("customers not found")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errs.NewNotFoundError("customer not found")
 		}
-		log.Println(err)
 
-		return nil, err
+		logs.Error(err)
+		return nil, errs.NewUnexpectedError()
 	}
 
 	customerResponses := []CustomerResponse{}
@@ -44,12 +45,26 @@ func (s customerService) GetCustomers() ([]CustomerResponse, error) {
 func (s customerService) GetCustomer(id int) (*CustomerResponse, error) {
 	customer, err := s.customerRepository.GetByID(id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("customer not found")
-		}
-		log.Println(err)
+		if errors.Is(err, sql.ErrNoRows) {
+			/*
+				return nil, errs.AppError{
+					Code:    http.StatusNotFound,
+					Message: "customer not found",
+				}
+			*/
 
-		return nil, err
+			return nil, errs.NewNotFoundError("customer not found")
+		}
+
+		logs.Error(err)
+		/*
+			return nil, errs.AppError{
+				Code:    http.StatusInternalServerError,
+				Message: "unexpected error",
+			}
+		*/
+
+		return nil, errs.NewUnexpectedError()
 	}
 
 	customerResponse := CustomerResponse{

@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/Montheankul-K/bank/handler"
+	"github.com/Montheankul-K/bank/logs"
 	"github.com/Montheankul-K/bank/repository"
 	"github.com/Montheankul-K/bank/service"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/spf13/viper"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -22,10 +22,13 @@ func main() {
 	db := initDatabase()
 
 	customerRepository := repository.NewCustomerRepositoryDB(db)
-	_ = customerRepository
-	customerRepositoryMock := repository.NewCustomerRepositoryMock()
-	customerService := service.NewCustomerService(customerRepositoryMock)
+	// customerRepositoryMock := repository.NewCustomerRepositoryMock()
+	customerService := service.NewCustomerService(customerRepository)
 	customerHandler := handler.NewCustomerHandler(customerService)
+
+	accountRepositoryDB := repository.NewAccountRepositoryDB(db)
+	accountService := service.NewAccountService(accountRepositoryDB)
+	accountHandler := handler.NewAccountHandler(accountService)
 
 	router := mux.NewRouter()
 
@@ -33,7 +36,11 @@ func main() {
 	router.HandleFunc("/customers/{customerID:[0-9]+}", customerHandler.GetCustomer).Methods(http.MethodGet)
 	// [0-9]+ is regx if param not a number return 404
 
-	log.Printf("Banking service started at port %v", viper.GetInt("app.port"))
+	router.HandleFunc("/customers{customerID:[0-9]+}/accounts", accountHandler.GetAccount).Methods(http.MethodGet)
+	router.HandleFunc("/customers{customerID:[0-9]+}/accounts", accountHandler.NewAccount).Methods(http.MethodPost)
+
+	// log.Printf("Banking service started at port %v", viper.GetInt("app.port"))
+	logs.Info("Banking service started at port " + viper.GetString("app.port")) // can't use format string
 	http.ListenAndServe(fmt.Sprintf(":%v", viper.GetInt("app.port")), router)
 }
 
